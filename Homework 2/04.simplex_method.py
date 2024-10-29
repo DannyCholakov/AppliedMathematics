@@ -1,55 +1,102 @@
 import numpy as np
-from scipy.optimize import linprog
+import pandas as pd
 
-# Define the problem parameters
-print("Част (а): Превръщане в каноничен вид и съставяне на симплекс таблица")
+# Даниел Чолаков ФК:2101681030  q=3 p=3
 
-# Objective function coefficients for maximization (converted to minimization by negating)
-c = [-3, 0, -2]
+# Инициализиране на данните за таблицата
+M = 1e6  # Голяма стойност M за изкуствените променливи
 
-# Constraint matrix (A) and bounds (b)
-A = [
-    [1, 1, 1],
-    [0, 1, 1],
-    [2, 1, 2]
-]
-b = [4, 2, 5]
+# Начална симплекс таблица, базирана на дадената задача
+# Колони: x1, x2, x3, s1, s2, A1, RHS (дясна страна)
+tableau = np.array([
+    [1,  1,  2,  0,  0,  0,  4],
+    [0,  1,  1, -1,  0,  1,  2],
+    [2,  1,  2,  0,  1,  0,  5],
+    [-3, 0, -2,  0,  0, -M, 0]
+])
 
-# Bounds for variables (x >= 0)
-x_bounds = (0, None)
+# Конвертиране в DataFrame за по-добра визуализация
+columns = ['x1', 'x2', 'x3', 's1', 's2', 'A1', 'RHS']
+index = ['x1', 'x2', 's2', 'Z']
+simplex_tableau = pd.DataFrame(tableau, columns=columns, index=index)
 
-# Part (a) - Display Canonical Form
-print("Целева функция за максимизация: Z = 3*x1 + 2*x3")
-print("Ограничения:")
-print("x1 + x2 + x3 <= 4")
-print("x2 + x3 >= 2")
-print("2*x1 + x2 + 2*x3 <= 5")
-print("x1, x2, x3 >= 0")
+# Показване на началната симплекс таблица
+simplex_tableau
 
-# Part (b) - Solve the Simplex using M-method (manually)
-print("\nЧаст (б): Намиране на начално базисно решение чрез M-метод")
+def simplex_iteration(tableau, M):
+    """
+    Извършва една итерация на симплекс метода върху таблицата.
+    Връща обновената таблица, позицията на ключовия елемент и статуса.
+    """
+    # Стъпка 1: Намираме влизащата променлива (най-негативен коефициент в последния ред)
+    entering_column = np.argmin(tableau[-1, :-1])
+    if tableau[-1, entering_column] >= 0:
+        # Оптимално решение е постигнато
+        return tableau, None, None, "optimal"
 
-# Convert inequality constraints to equalities by adding slack variables
-# x1 + x2 + x3 + s1 = 4
-# x2 + x3 - s2 = 2
-# 2*x1 + x2 + 2*x3 + s3 = 5
+    # Стъпка 2: Намираме излизащата променлива чрез минимално съотношение
+    ratios = []
+    for i in range(len(tableau) - 1):  # Пропускаме последния ред (целева функция)
+        if tableau[i, entering_column] > 0:
+            ratio = tableau[i, -1] / tableau[i, entering_column]
+            ratios.append(ratio)
+        else:
+            ratios.append(np.inf)  # Игнориране на отрицателни или нулеви стойности
 
-# Using linprog to solve the problem, but now using 'highs' method to avoid deprecated warning
-result = linprog(c, A_ub=A, b_ub=b, bounds=[x_bounds, x_bounds, x_bounds], method='highs')
+    leaving_row = np.argmin(ratios)
+    if ratios[leaving_row] == np.inf:
+        return tableau, None, None, "unbounded"
 
-# Part (c) - Display Intermediate Steps (Simulated manually)
-print("\nЧаст (в): Запис на междинните резултати от всяка итерация")
-if result.success:
-    # Display solution
-    print(f"Оптимално решение: x1 = {result.x[0]:.2f}, x2 = {result.x[1]:.2f}, x3 = {result.x[2]:.2f}")
-    print(f"Оптимална стойност на целевата функция: Z = {result.fun * -1:.2f}")
+    # Стъпка 3: Извършване на ключовия елемент
+    pivot = tableau[leaving_row, entering_column]
+    tableau[leaving_row, :] /= pivot  # Нормализиране на реда с ключовия елемент
 
-    # Simulate showing pivot selection and updates (conceptual)
-    print("\nПримерен избор на ключов елемент и промяна на променливи:")
-    # For demonstration, showing static example data
-    print("1. Итерация: Избран ключов елемент в първия ред и първата колона (x1)")
-    print("   Промяна: x1 става базисна променлива, x2 и x3 остават не-базисни.")
-    print("2. Итерация: Избран ключов елемент във втория ред и третата колона (x3)")
-    print("   Промяна: x3 става базисна променлива, x1 и x2 са не-базисни.")
-else:
-    print("Неуспешно решение: Няма оптимално решение.")
+    # Обновяване на останалите редове за формиране на единичен вектор в колоната на ключовия елемент
+    for i in range(len(tableau)):
+        if i != leaving_row:
+            row_factor = tableau[i, entering_column]
+            tableau[i, :] -= row_factor * tableau[leaving_row, :]
+
+    return tableau, entering_column, leaving_row, "continue"
+
+
+# Итеративно прилагане на симплекс итерации, докато не бъде намерено оптимално решение
+iteration_count = 0
+status = "continue"
+
+while status == "continue":
+    tableau, entering_column, leaving_row, status = simplex_iteration(tableau, M)
+    iteration_count += 1
+
+    # Печат на междинните резултати след всяка итерация за проследяване
+    print(f"Итерация {iteration_count}:")
+    print(f"Индекс на влизащата променлива: {entering_column}")
+    print(f"Индекс на излизащата променлива: {leaving_row}")
+    print("Обновена таблица:")
+    print(pd.DataFrame(tableau, columns=columns, index=index))
+    print("\n")
+
+# Краен резултат със статус оптимално или неограничено решение
+status, pd.DataFrame(tableau, columns=columns, index=index)
+
+
+# Итерация 1:
+# Индекс на влизащата променлива: 5
+# Индекс на излизащата променлива: 1
+# Обновена таблица:
+#      x1         x2        x3         s1   s2   A1        RHS
+# x1  1.0        1.0       2.0        0.0  0.0  0.0        4.0
+# x2  0.0        1.0       1.0       -1.0  0.0  1.0        2.0
+# s2  2.0        1.0       2.0        0.0  1.0  0.0        5.0
+# Z  -3.0  1000000.0  999998.0 -1000000.0  0.0  0.0  2000000.0
+#
+#
+# Итерация 2:
+# Индекс на влизащата променлива: None
+# Индекс на излизащата променлива: None
+# Обновена таблица:
+#      x1         x2        x3         s1   s2   A1        RHS
+# x1  1.0        1.0       2.0        0.0  0.0  0.0        4.0
+# x2  0.0        1.0       1.0       -1.0  0.0  1.0        2.0
+# s2  2.0        1.0       2.0        0.0  1.0  0.0        5.0
+# Z  -3.0  1000000.0  999998.0 -1000000.0  0.0  0.0  2000000.0

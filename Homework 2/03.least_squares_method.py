@@ -1,41 +1,68 @@
 import numpy as np
-from numpy.polynomial.polynomial import Polynomial
 import matplotlib.pyplot as plt
+from numpy.linalg import lstsq
 
-# Дадени стойности за p и q
-p = 3
-q = 3
+# Даниел Чолаков ФК:2101681030  q=3 p=3
 
 # Данни
-t_values = np.array([0, 0.1 * p, 0.21 * q, 0.23, 0.35, 0.46, 0.71, 0.97])
-f_values = np.array([2.01, 2.47, 2.80, 2.87, 3.17, 3.44, 3.56, 3.33])
+x = np.array([0, 0.3, 0.63, 0.23, 0.35, 0.46, 0.71, 0.97])
+y = np.array([2.01, 2.47, 2.80, 2.87, 3.17, 3.44, 4.56, 3.33])
+z = 0.101 * 3
 
-# Част (а): Линеен модел чрез метода на най-малките квадрати
-print("Част (а): Линеен модел чрез метода на най-малките квадрати")
-linear_model = np.polyfit(t_values, f_values, 1)
-print(f"Линеен модел (степен 1): y = {linear_model[0]:.4f} * x + {linear_model[1]:.4f}")
+# Модел на полином от първа степен (линейна регресия)
+A1 = np.vstack([np.ones(len(x)), x]).T
+coef1, residuals1, _, _ = lstsq(A1, y, rcond=None)
+P1 = lambda t: coef1[0] + coef1[1] * t
+error1 = np.sqrt(np.sum((P1(x) - y) ** 2))
 
-# Част (б): Модел от втора степен чрез метода на най-малките квадрати
-print("Част (б): Квадратичен модел чрез метода на най-малките квадрати")
-quadratic_model = np.polyfit(t_values, f_values, 2)
-print(f"Квадратичен модел (степен 2): y = {quadratic_model[0]:.4f} * x^2 + {quadratic_model[1]:.4f} * x + {quadratic_model[2]:.4f}")
+# Прогноза с помощта на модела от първа степен при z
+P1_z = P1(z)
 
-# Част (в): Изчисляване на грешката за всеки модел
-print("Част (в): Изчисляване на грешката за всеки модел")
-linear_predictions = np.polyval(linear_model, t_values)
-quadratic_predictions = np.polyval(quadratic_model, t_values)
+# Модел на полином от втора степен (квадратична апроксимация)
+A2 = np.vstack([np.ones(len(x)), x, x**2]).T
+coef2, residuals2, _, _ = lstsq(A2, y, rcond=None)
+P2 = lambda t: coef2[0] + coef2[1] * t + coef2[2] * t**2
+error2 = np.sqrt(np.sum((P2(x) - y) ** 2))
 
-linear_error = np.mean((f_values - linear_predictions)**2)
-quadratic_error = np.mean((f_values - quadratic_predictions)**2)
+# Прогноза с помощта на модела от втора степен при z
+P2_z = P2(z)
 
-print(f"Грешка на линейния модел: {linear_error:.4f}")
-print(f"Грешка на квадратичния модел: {quadratic_error:.4f}")
+# Графика
+plt.figure(figsize=(10, 6))
+plt.scatter(x, y, color="blue", label="Точки на данните")
 
-# Част (г): Приближени стойности за двата модела при z = 0.101 * p
-z = 0.101 * p
-print(f"Част (г): Приближени стойности за двата модела при z = {z:.4f}")
-linear_estimate = np.polyval(linear_model, z)
-quadratic_estimate = np.polyval(quadratic_model, z)
+# Графика на модела от първа степен
+x_plot = np.linspace(0, 1, 100)
+plt.plot(x_plot, P1(x_plot), label=f"Модел от първа степен: y = {coef1[0]:.2f} + {coef1[1]:.2f} * x", color="red")
 
-print(f"Линеен модел при z = {z:.4f}: {linear_estimate:.4f}")
-print(f"Квадратичен модел при z = {z:.4f}: {quadratic_estimate:.4f}")
+# Графика на модела от втора степен
+plt.plot(x_plot, P2(x_plot), label=f"Модел от втора степен: y = {coef2[0]:.2f} + {coef2[1]:.2f} * x + {coef2[2]:.2f} * x^2", color="green")
+
+plt.legend()
+plt.xlabel("t")
+plt.ylabel("f(t)")
+plt.title("Приближение по метода на най-малките квадрати")
+plt.grid(True)
+plt.show()
+
+# Извеждане на резултати
+print("Модел от първа степен:")
+print(f"Уравнение: P1(t) = {coef1[0]:.2f} + {coef1[1]:.2f} * t")
+print(f"Абсолютна грешка: {error1:.2f}")
+print(f"Приближение при z = 0.101 * 3: P1(z) = {P1_z:.2f}")
+
+print("\nМодел от втора степен:")
+print(f"Уравнение: P2(t) = {coef2[0]:.2f} + {coef2[1]:.2f} * t + {coef2[2]:.2f} * t^2")
+print(f"Абсолютна грешка: {error2:.2f}")
+print(f"Приближение при z = 0.101 * 3: P2(z) = {P2_z:.2f}")
+
+
+# Модел от първа степен:
+# Уравнение: P1(t) = 2.33 + 1.65 * t
+# Абсолютна грешка: 1.50
+# Приближение при z = 0.101 * 3: P1(z) = 2.83
+#
+# Модел от втора степен:
+# Уравнение: P2(t) = 1.91 + 4.23 * t + -2.63 * t^2
+# Абсолютна грешка: 1.34
+# Приближение при z = 0.101 * 3: P2(z) = 2.95
