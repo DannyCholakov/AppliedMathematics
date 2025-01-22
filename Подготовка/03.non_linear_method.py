@@ -3,55 +3,55 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 try:
-    # Get user input for x and y values
-    x_values = input("Enter x values separated by spaces: ")
-    y_values = input("Enter y values separated by spaces: ")
+    # Въвеждаме стойности за x и y от потребителя
+    x_values = input("Въведете стойности за x, разделени с интервали: ")
+    y_values = input("Въведете стойности за y, разделени с интервали: ")
 
-    # Convert input strings to numpy arrays
+    # Преобразуваме въведените стойности в numpy масиви
     x = np.array([float(val) for val in x_values.split()])
     y = np.array([float(val) for val in y_values.split()])
 
-    # Check if x and y have the same length
+    # Проверяваме дали броят на стойностите на x и y е еднакъв
     if len(x) != len(y):
-        raise ValueError("The number of x and y values must be the same.")
+        raise ValueError("Броят на стойностите за x и y трябва да е същият.")
 
-    # User input for the function
-    user_function = input("Enter the function to fit (use 'a0', 'a1', 'a2', etc. as parameters, and 'x' as the variable):\n")
+    # Въвеждаме функцията, която ще бъде аппроксимирана
+    user_function = input("Въведете функцията за апроксимация (използвайте 'a0', 'a1', 'a2' и т.н. за параметри и 'x' като променлива):\n")
 
-    # Convert the string into a Python function
+    # Преобразуваме въведената функция в Python функция
     def func(x, *params):
         param_dict = {f'a{i}': params[i] for i in range(len(params))}
         return eval(user_function, {"np": np, "x": x}, param_dict)
 
-    # Guess the number of parameters (count occurrences of 'a')
+    # Познаваме броя на параметрите (броим срещанията на 'a')
     num_params = user_function.count('a')
     if num_params == 0:
-        raise ValueError("No parameters 'a0', 'a1', etc. found in the function.")
+        raise ValueError("Не са открити параметри 'a0', 'a1' и т.н. във функцията.")
 
-    # Curve fitting
+    # Извършваме аппроксимация на кривата
     popt, pcov = curve_fit(func, x, y, p0=[1] * num_params)
 
-    # Displaying the fitted model
+    # Извеждаме получената функция
     param_str = " + ".join([f"{popt[i]}*x^{i}" for i in range(len(popt))])
-    fitted_model = f"FittedModel: {param_str}"
+    fitted_model = f"Моделираната функция: {param_str}"
     print(fitted_model)
 
-    # Plot the original data and the fitted model
-    plt.scatter(x, y, color="blue", label="Data Points")
+    # Изчертаваме оригиналните данни и моделираната крива
+    plt.scatter(x, y, color="blue", label="Данни")
     t_vals = np.linspace(min(x), max(x), 100)
     plt.plot(t_vals, func(t_vals, *popt), label=fitted_model, color="orange")
     plt.legend()
     plt.show()
 
-    # Error calculation
+    # Изчисляваме грешката
     absolute_error = np.sum((func(x, *popt) - y) ** 2)
-    print(f"Absolute Error: {absolute_error}")
+    print(f"Абсолютна грешка: {absolute_error}")
 
 except ValueError as ve:
-    print(f"Value Error: {ve}")
+    print(f"Грешка в стойността: {ve}")
 except SyntaxError:
-    print("Syntax Error: There was a problem with the function syntax.")
+    print("Синтактична грешка: Имаш проблем със синтаксиса на функцията.")
 except NameError as ne:
-    print(f"Name Error: {ne}")
+    print(f"Грешка в името: {ne}")
 except Exception as e:
-    print(f"An unexpected error occurred: {e}")
+    print(f"Неочаквана грешка: {e}")

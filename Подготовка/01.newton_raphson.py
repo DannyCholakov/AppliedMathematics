@@ -1,133 +1,135 @@
-import math
-from sympy import symbols, diff, sin, cos, exp
-import matplotlib.pyplot as plt
+import sympy as sp
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Define x as a symbol for sympy
-x = symbols('x')
-function_string = input("Enter your function: ")
-function_transform = eval(function_string)
+# Функция за метода на Нютон
+def newton_method(f, f_prime, x0, epsilon=1e-4, max_iter=100):
+    """
+    Намира корен на уравнението f(x) = 0 с метода на Нютон.
+    """
+    x = sp.symbols('x')
 
+    # Ламбда функции за числено изчисляване
+    f_numeric = sp.lambdify(x, f, 'math')
+    f_prime_numeric = sp.lambdify(x, f_prime, 'math')
 
-# Define the function using sympy's exp and polynomial
-def f(x):
-    return function_transform
+    iterations = []
 
-    # Example function:
-    # x + exp(x)
-    # x-sin(x)-0.25
-    # exp(x)-x**2 - 2*x - 2
+    for i in range(max_iter):
+        fx = f_numeric(x0)
+        fx_prime = f_prime_numeric(x0)
 
-
-# Derivative of the function f(x)
-f_prime = diff(f(x), x)
-f_double_prime = diff(f_prime, x)
-
-# Convert to Python functions for numeric evaluation
-f_numeric = lambda x_val: float(f(x).subs(x, x_val))
-f_prime_numeric = lambda x_val: float(f_prime.subs(x, x_val))
-f_double_prime_numeric = lambda x_val: float(f_double_prime.subs(x, x_val))
-
-
-# Function to plot the initial graph (Preview) for f(x)
-def plot_preview():
-    # Use a default range from -5 to 5 or adjust as needed
-    x_vals_preview = np.linspace(-5, 5, 100)
-    f_vals_preview = [f_numeric(val) for val in x_vals_preview]
-
-    plt.figure(figsize=(8, 8))  # Set figure size
-    plt.plot(x_vals_preview, f_vals_preview, label="f(x)", color="blue", linewidth=2)
-
-    plt.axhline(0, color='black', linewidth=0.5)  # Add x-axis
-    plt.axvline(0, color='black', linewidth=0.5)  # Add y-axis
-    plt.title('Preview of f(x)')
-    plt.xlabel('x')
-    plt.ylabel('f(x)')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
-# Preview the graph for the user before they select an interval
-plot_preview()
-
-# Interval values
-a = float(input('Enter interval A: '))
-b = float(input('Enter interval B: '))
-tolerance = int(input('Enter interval Tolerance: '))
-
-# Define a larger range for the whole plot
-x_vals_full = np.linspace(-10, 10, 1000)
-
-# Compute y values for f(x), f'(x), and f''(x) over the full range
-f_vals_full = [f_numeric(val) for val in x_vals_full]
-f_prime_vals_full = [f_prime_numeric(val) for val in x_vals_full]
-f_double_prime_vals_full = [f_double_prime_numeric(val) for val in x_vals_full]
-
-# Define the range for the colored lines (between a and b)
-x_vals_range = np.linspace(a, b, 100)
-f_vals_range = [f_numeric(val) for val in x_vals_range]
-f_prime_vals_range = [f_prime_numeric(val) for val in x_vals_range]
-f_double_prime_vals_range = [f_double_prime_numeric(val) for val in x_vals_range]
-
-
-def plot():
-    # Plot the full graph
-    plt.figure(figsize=(10, 10))  # Make the plot square for equal axes
-
-    # Plot f(x) over the full range and then highlight it between a and b
-    plt.plot(x_vals_full, f_vals_full, label="f(x)", color="gray", linestyle='--')
-    plt.plot(x_vals_range, f_vals_range, label="f(x) in range", color="blue", linewidth=2)
-
-    # Plot f/'(x) over the full range and then highlight it between a and b
-    plt.plot(x_vals_full, f_prime_vals_full, label="f'(x)", color="gray", linestyle='--')
-    plt.plot(x_vals_range, f_prime_vals_range, label="f'(x) in range", color="red", linewidth=2)
-
-    # Plot f''(x) over the full range and then highlight it between a and b
-    plt.plot(x_vals_full, f_double_prime_vals_full, label="f''(x)", color="gray", linestyle='--')
-    plt.plot(x_vals_range, f_double_prime_vals_range, label="f''(x) in range", color="green", linewidth=2)
-
-    # Set plot limits and labels
-    plt.xlim(-20, 20)  # Adjust the x-range as needed
-    plt.ylim(-20, 20)  # Adjust the y-range as needed
-    plt.gca().set_aspect('equal', adjustable='box')  # Set equal aspect ratio for x and y axes
-    plt.axhline(0, color='black', linewidth=0.5)  # Add x-axis
-    plt.axvline(0, color='black', linewidth=0.5)  # Add y-axis
-    plt.title(f'Plot of f(x) = {f(x)}')
-    plt.xlabel('x')
-    plt.ylabel('f(x)')
-
-    # Add legend and show the plot
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
-# Check if the function has different signs at the ends of the interval
-if f_numeric(a) * f_numeric(b) > 0:
-    print("Bad interval!")  # Bad interval
-else:
-    # Initial guess for x0
-    x0 = a if f_numeric(a) * f_prime_numeric(a) > 0 else b
-    print('Initial guess x0 =', x0)
-
-    # Set precision and initial error
-    eps = 10 ** - tolerance  # Tolerance for stopping criterion
-    n = 0  # Iteration counter
-    err = math.inf  # Initialize error
-
-    # Newton-Raphson loop
-    while True:
-        x1 = x0 - f_numeric(x0) / f_prime_numeric(x0)  # Newton's update rule
-        print(f'n = {n}, x = {x0:9f}, f[x] = {f_numeric(x0):9e}, err = {err:9e}')
-        err = abs(x1 - x0)  # Update error
-        # Update x0 and increment the counter
-        n += 1
-        x0 = x1  # Update x0
-        if err <= eps:  # Exit condition after printing
+        if abs(fx_prime) < 1e-10:
+            print("Проблем: Първата производна е твърде малка.")
             break
 
-    # Final iteration
-    print(f'n = {n}, x = {x0:9f}, f[x] = {f_numeric(x0):9e}, err = {err:9e}')
-    print(f'Result x* ~ {x0:6f} with error {err:9e}')
-    plot()
+        # Итерация на метода на Нютон
+        x_new = x0 - fx / fx_prime
+        error = abs(x_new - x0)
+
+        iterations.append((i + 1, x_new, error))
+
+        if error < epsilon:
+            break
+
+        x0 = x_new
+
+    return iterations
+
+
+# Основна функция за решаване
+def solve_newton_method(function_input, p_val, q_val, epsilon=1e-4, x0=0):
+    # Дефинираме променливите
+    x, p, q = sp.symbols('x p q')
+
+    # Преобразуваме въведеното уравнение в символичен израз
+    f = sp.sympify(function_input)
+
+    # Изчисляваме първата и втората производна на функцията
+    f_prime = sp.diff(f, x)
+    f_double_prime = sp.diff(f_prime, x)
+
+    # Подставяме стойности за p и q
+    f_numeric = f.subs({p: p_val, q: q_val})
+    f_prime_numeric = f_prime.subs({p: p_val, q: q_val})
+    f_double_prime_numeric = f_double_prime.subs({p: p_val, q: q_val})
+
+    print("\nФункция:", f_numeric)
+    print("Първа производна:", f_prime_numeric)
+    print("Втора производна:", f_double_prime_numeric)
+
+    # Намираме корена с метода на Нютон
+    iterations = newton_method(f, f_prime, x0, epsilon)
+
+    # Отпечатваме резултатите
+    print("\nРезултати от метода на Нютон:")
+    print(f"{'Итерация':<10}{'Приближение x':<20}{'Грешка':<10}")
+    for i, x_val, error in iterations[:3]:  # Първите 3 итерации
+        print(f"{i:<10}{x_val:<20.10f}{error:<10.10f}")
+
+    print("\nКраен резултат:")
+    final_iteration = iterations[-1]
+    print(f"x = {final_iteration[1]:.10f} с грешка {final_iteration[2]:.10f}")
+
+    return iterations, f, x
+
+
+# Функция за графиката
+def plot_function_and_iterations(f, iterations, x0, epsilon=1e-4):
+    # Преобразуваме функциите за числено изчисляване
+    f_numeric = sp.lambdify('x', f, 'math')
+
+    # Генерираме точки за графиката
+    x_vals = np.linspace(-5, 5, 400)
+    y_vals = f_numeric(x_vals)
+
+    # Чертаем графиката
+    plt.plot(x_vals, y_vals, label=str(f))
+    plt.axhline(0, color='black', linewidth=1)  # Оста X
+    plt.axvline(0, color='black', linewidth=1)  # Оста Y
+
+    # Добавяме итерациите на метода на Нютон
+    x_iter = [x0]  # Началната стойност
+    for i, x_val, error in iterations:
+        x_iter.append(x_val)
+
+    y_iter = [f_numeric(x) for x in x_iter]
+
+    # Чертаем точките на итерациите
+    plt.scatter(x_iter, y_iter, color='red', label='Итерации', zorder=5)
+
+    # Свързваме точките с линии
+    plt.plot(x_iter, y_iter, 'r--', alpha=0.6)
+
+    # Настройки на графиката
+    plt.title("Метод на Нютон - Итерации")
+    plt.xlabel("x")
+    plt.ylabel("f(x)")
+    plt.legend()
+
+    # Задаваме новия диапазон за осите
+    plt.xlim(-5, 5)
+    plt.ylim(-5, 5)
+
+    plt.xticks(np.arange(-5, 5, 1))  # Деления на x ос с по-малка стъпка
+    plt.yticks(np.arange(-5, 5, 1))  # Деления на y ос с по-малка стъпка
+
+    plt.grid(True)
+    plt.show()
+
+
+if __name__ == "__main__":
+    # Вход от потребителя
+    print("Метод на Нютон")
+    print("Въведи уравнението.")
+    function_input = input("Уравнение f(x) (например: sin(x + p) + p*x**3 - 3*q): ").strip()
+    epsilon = float(input("Точност epsilon (напр. 0.0001): "))
+    x0 = float(input("Начално приближение x0 (напр. 0): "))
+    p_val = float(input("Стойност на p: "))
+    q_val = float(input("Стойност на q: "))
+
+    # Решаване с метода на Нютон
+    iterations, f, x = solve_newton_method(function_input, p_val, q_val, epsilon, x0)
+
+    # Чертаем графика с итерациите
+    plot_function_and_iterations(f, iterations, x0, epsilon)
